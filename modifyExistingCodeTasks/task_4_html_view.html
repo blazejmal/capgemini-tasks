@@ -1,0 +1,89 @@
+<div ng-if ="data.canRead && data.headless && data.urLink" class="alert alert-info" ng-class="{'none': c.hide}"> <span class="notification-icon icon-info"><span class="sr-only">Info Message</span></span> ${Some of these comments were hidden during ticket routing to protect your privacy. Refer to the originating ticket for current status and updates - } <a href={{data.urLink}} class="alert-link alert-text">{{::data.number.display_value}}</a> <button type="button" class="close btn-icon icon-cross" aria-label="Close" ng-click="hideMessage()"></button> </div>
+<div ng-if="data.canRead && !data.hideHeader">
+   <div ng-if="data.primary_ticket_link" class="alert alert-warning"> <span class="notification-icon icon-alert"><span class="sr-only">Info Message</span></span> ${The information shown below may have additional updates. To view the latest record, <a href={{data.primary_ticket_link}} class="alert-link alert-text">click here</a>} </div>
+   <div class="panel-body no-padder">
+      <div ng-if="!data.isEmpty" class= "form-group pull-left m-n">
+         <label class="label-color m-n text-xs" for="data.number.name">{{::data.number.label}}</label>
+         <div class="form-control no-padder no-border no-bg" id="data.number.name">{{::data.number.display_value}}</div>
+      </div>
+      <div ng-if="data.headerFields.length > 0" class="pull-right">
+         <div class= "form-group inline m-n" ng-if="field.value && (field.type != 'decimal' || field.type == 'decimal' && field.value != 0)" ng-repeat="field in data.headerFields" ng-class="{'padder-md-r': !$last}">
+            <label class="label-color m-n text-xs" for="field.name">{{::field.label}}</label>
+            <div ng-switch="field.type">
+               <div ng-switch-when="glide_date_time" title="{{::field.display_value}}" class="form-control no-padder no-border no-bg">
+                  <sn-time-ago timestamp="::field.value"></sn-time-ago>
+               </div>
+               <div ng-switch-default ng-class="{'font-bold': field.name == 'state'}" class="form-control no-padder no-border no-bg">{{::field.display_value}}</div>
+            </div>
+         </div>
+      </div>
+   </div>
+   <div class="panel b">
+      <div class="panel-heading bg-primary panel-la-jolla-default clearfix">
+         <div class="flex-display title-padding">
+            <h2 class="inline m-n m-r-sm" style="word-break: break-word;">{{::data.title}}</h2>
+            <div ng-if="!data.primary_ticket_link && c.data.currentActionWidget" class="inline pull-right" style="margin-left: auto;">
+               <sp-widget widget="c.data.currentActionWidget" page="{table:data.table, sys_id: data.sys_id}"></sp-widget>
+            </div>
+         </div>
+         <div ng-if="data.description" ng-init="c.description_toggle = false">
+            <div ng-if="c.description_toggle" id="description-toggle" aria-hidden="{{!c.description_toggle}}">
+               <h4 class="title-padding break-word" ng-bind-html="::data.description"></h4>
+            </div>
+            <button class="options-btn pull-left" id="wrapper" ng-click="c.description_toggle = !c.description_toggle" aria-expanded="{{c.description_toggle}}" aria-controls="description-toggle">
+               <div ng-show="!c.description_toggle">${Show more}</div>
+               <div ng-show="c.description_toggle">${Show less}</div>
+               <span style="font-size: 10px; padding-left:10px" class="glyphicon" ng-class="c.description_toggle ? 'glyphicon-chevron-up' : 'glyphicon-chevron-down'"></span>
+            </button>
+         </div>
+      </div>
+      <div ng-if="!data.show_info_widget && data.fields.length > 0">
+         <div class="panel-body">
+            <div class="ticket-fields" ng-if="data.fields.length > 0">
+               <div class= "col-md-2 col-sm-3 col-xs-4 break-word adjust-height" ng-if="(field.type != 'decimal' || field.type == 'decimal' && field.value != 0)" ng-repeat="field in data.fields| filter: {type:'!workflow'}">
+                  <div ng-switch="field.type">
+                     <div ng-switch-when="glide_date_time" title="{{field.display_value}}">
+                        <p class="label-color size text-xs header-text">{{::field.label}}</p>
+                        <span class="padding-sm" ng-if="field.name == 'due_date' || field.name == 'estimated_delivery'" data-toggle="tooltip" title="{{field.display_value}}">{{::field.display_value}}</span>
+                        <span ng-if="field.name != 'due_date' && field.name != 'estimated_delivery'">
+                           <sn-time-ago class="padding-sm" timestamp="::field.value"/>
+                        </span>
+                     </div>
+                     <div ng-switch-when="glide_list">
+                        <p class="label-color size header-text text-xs">{{::field.label}}</p>
+                        <span ng-if="field.reference == 'sys_user' && field.value" ng-repeat="user in field.user" data-toggle="tooltip" title="{{::user.name}}">
+                           <sn-avatar ng-click="openProfile(user.userID)" primary="user" enable-tooltip="false" enable-context-menu="true" show-presence="true" ng-style="{'cursor':data.isExternalUser?'default':'pointer'}"></sn-avatar>
+                        </span>
+                        <span ng-if="field.reference != 'sys_user' && field.value"> <span ng-repeat="item in field.display_value" class="header-text"> <span data-toggle="tooltip" title="{{::item}}">{{::item}}</span> <span ng-if="!$last">,</span> </span> </span>
+                     </div>
+                     <div ng-switch-default ng-if="field.type != 'glide_list'">
+                        <span ng-if="field.reference == 'sys_user' && field.value" class="pull-left avatar" data-toggle="tooltip" title="{{::field.user.name}}">
+                           <sn-avatar ng-click="openProfile(field.user.userID)" primary=field.user enable-tooltip="false" enable-context-menu="true" show-presence="true" ng-style="{'cursor':data.isExternalUser?'default':'pointer'}"></sn-avatar>
+                        </span>
+                        <p class="label-color size header-text text-xs">{{::field.label}}</p>
+                        <span ng-if="field.reference != 'sys_user' && field.value" class="header-text"><span data-toggle="tooltip" title="{{::field.display_value}}">{{::field.display_value}}</span></span> <a ng-if="field.reference == 'sys_user' && field.value" aria-label="{{::field.display_value}}" ng-click="openProfile(field.user.userID)" class="header-text align-tooltip" ng-style="{'cursor':data.isExternalUser?'default':'pointer'}"><span data-toggle="tooltip" title="{{::field.display_value}}">{{::field.display_value}}</span></a>
+                     </div>
+                  </div>
+               </div>
+            </div>
+         </div>
+         <div ng-repeat="field in data.fields|filter: {type:'workflow'}">
+            <div class="panel-body padder-t-none">
+               <p class="label-color size header-text text-xs">{{::field.label}}</p>
+               <div class="padding-sm">
+                  <sp-widget widget="field.stageWidget"></sp-widget>
+               </div>
+            </div>
+         </div>
+      </div>
+      <div ng-if="data.show_info_widget">
+         <hr>
+         <div class="panel-body">
+            <sp-widget widget= "c.data.info_widget" page="{table:data.table, sys_id: data.sys_id}"></sp-widget>
+         </div>
+      </div>
+   </div>
+</div>
+<div ng-if="!data.canRead || !data.canReadConfig" class="panel">
+   <h3> ${Sorry, either the data don't exist or you don't have the access} </h3>
+</div>

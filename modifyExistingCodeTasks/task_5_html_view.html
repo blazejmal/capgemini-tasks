@@ -1,0 +1,158 @@
+<div>
+  <div ng-if="!data.canRead && !data.isNewRecord">
+    ${Requested record not found}
+  </div>
+  <div ng-if="data.canRead && !data.isNewRecord" class="panel panel-{{options.color}} b ticket_conversation" >
+    <div class="panel-heading">
+
+      <div class="h2 panel-title panel-title-container">
+        <h2 class="h4 panel-title" aria-label="{{::data.ticketTitle}} ${Ticket history}" >{{::data.ticketTitle}}</h2>
+
+        <!--START OF CHANGES FOR TASK -->
+        <h5 class="panel-description"> {{::data.shortDescription}} </h5>
+        <!-- END OF CHANGES FOR TASK  -->
+
+        <div class="pull-right panel-title-icons">
+          <ul>
+            <li>
+              <button href ng-show="data.showLocationIcon && data.canWrite" class="panel-button btn btn-link" ng-click="checkInLocation()" title="{{data.checkInLocMsg}}">
+                <span class="glyphicon glyphicon-globe"></span>
+              </button>
+            </li>
+            <li>
+              <button href class="panel-button btn btn-link" ng-show="isNative" ng-click="scanBarcode()" title="{{data.scanBarcodeMsg}}">
+                <span class="glyphicon glyphicon-barcode"></span>
+              </button>
+            </li>
+            <li ng-if="::(!data.hideAttachmentBtn)"><sp-attachment-button ng-if="::data.canWrite && data.canAttach"></sp-attachment-button></li>
+          </ul>
+        </div>
+      </div>
+    </div>
+
+    <div class="panel-body">
+      <div ng-if="data.hasReadableJournalField">
+        <form ng-submit="postEntry(data.journalEntry)" id="sand">
+          <div ng-show="data.hasWritableJournalField" class="input-group">
+            <textarea ng-keypress="keyPress($event)"
+                      sn-resize-height="trim"
+                      rows="1" id="post-input"
+                      class="form-control no-resize overflow-hidden"
+                      ng-model='data.journalEntry'
+                      ng-model-options='{debounce: 250}'
+                      ng-attr-placeholder="{{getPlaceholder()}}"
+                      aria-label="{{getPlaceholder()}}"
+                      autocomplete="off"
+                      ng-change="userTyping(data.journalEntry)"/>
+            <span class="journal-field-indicator" ng-style="({'background-color': data.useSecondaryJournalField ? data.secondaryJournalField.color : data.primaryJournalField.color})"></span>
+            <span class="input-group-btn" style="vertical-align: top">
+              <input type="submit" class="btn btn-primary" value="{{data.btnLabel}}" ng-disabled="data.isPosting"/>
+            </span>
+          </div>
+          <div ng-if="::(data.secondaryJournalField && data.secondaryJournalField.can_write)">
+            <label class="pull-right">
+              <input type="checkbox" ng-model="::data.useSecondaryJournalField" ng-change="updateFormWithJournalFields()"/>
+              <span> {{::data.secondaryJournalField.label}}</span>
+            </label>
+          </div>
+        </form>
+        <ul class="list-group m-b-none" ng-if="typing.length > 0">
+          <li class="list-group-item user-typing m-t" ng-repeat="u in typing">${{{::u.user_display_name}} is typing}</li>
+        </ul>
+        <ul class="list-group m-b-none m-t" ng-if="msg">
+          <li class="list-group-item user-typing">{{msg}}</li>
+        </ul>
+        <div class="timeline-container">
+          <ul role="list" class="timeline" aria-label="${Ticket history}">
+            <li class="timeline-item" ng-class="::{'timeline-inverted': e.user_sys_id == data.stream.user_sys_id} " ng-repeat="e in data.mergedEntries">
+              <div class="timeline-badge">
+                <sn-avatar-once
+                           ng-if="hasLiveProfile(e.user_sys_id)"
+                           primary="getLiveProfileByUserId(e.user_sys_id)"
+                           class="avatar-large"
+                           show-presence="false"
+                           enable-context-menu="false">
+                </sn-avatar-once>
+              </div>
+              <div class="timeline-panel">
+                <div class="timeline-panel-inner" ng-style="::{'border-color': getFieldColor(e.element)}">
+                  <div class="timeline-heading">
+                    <div class="timeline-title h4">{{::e.name}}</div>
+                    <p class = "time-text">
+                      <small class="text-muted" >
+                        <span class="glyphicon glyphicon-time" aria-hidden="true" tabindex="-1" />
+                        <sn-time-ago  timestamp="::e.sys_created_on"  />
+                      </small>
+                      <i ng-if="::e.field_label" class="fa fa-circle text-muted" aria-hidden="true"></i>
+                      <small class = "text-muted journal-type">{{::e.field_label}}</small>
+                    </p>
+                  </div>
+                  <div class="timeline-body">
+                    <p ng-if="::(e.element != 'attachment')" ng-bind-html="::e.value"></p>
+                    <div ng-if="::(e.element == 'attachment')">
+                      <a ng-if="(e.attachment.state == 'available')" target="_blank" href="/sys_attachment.do?view=true&sys_id={{::e.attachment.sys_id}}" title="${View}">
+                        <img ng-if="e.attachment.thumbnail_path" alt="" ng-src="/{{::e.attachment.path}}?t=medium" class="img-responsive"/>
+                      </a>
+                      <a ng-if="(e.attachment.state == '' || e.attachment.state == 'pending' || e.attachment.state == 'available_conditionally')" ng-click="scanAttachment(e.attachment)" href="javascript:void(0)" title="${View}">
+                        <img ng-if="e.attachment.thumbnail_path" alt="" ng-src="/{{::e.attachment.path}}?t=medium" class="img-responsive"/>
+                      </a>
+                      <div>
+                        <div ng-if="(e.attachment.state == 'available')">
+                        <a href="/sys_attachment.do?sys_id={{::e.attachment.sys_id}}" target="_blank" title="{{dataViewMsg}}"><strong>{{e.attachment.file_name}}</strong></a><br/>
+                        {{::e.attachment.size}}
+                      </div>
+                      <div ng-if="(e.attachment.state == 'not_available')">
+                        <span title="{{dataViewMsg}}" class="not_available">{{e.attachment.file_name}}</span><br/>
+                        <span class="error">{{::data.scanFailedMsg}}</span>
+                      </div>
+                      <div ng-if="(e.attachment.state == '' || e.attachment.state == 'pending' || e.attachment.state == 'available_conditionally')">
+                        <a href="javascript:void(0)" ng-click="scanAttachment(e.attachment)" title="{{dataViewMsg}}"><strong>{{e.attachment.file_name}}</strong></a><br/>
+                        {{::e.attachment.size}}
+                      </div>
+                    </div>
+                  </div>
+                </div>
+              </div>
+            </li>
+            <li role="listitem" class="timeline-item timeline-inverted" aria-label="{{data.stream.user_full_name}}">
+              <div class="timeline-badge">
+                <sn-avatar-once
+                           ng-if="hasLiveProfile(data.stream.user_sys_id)"
+                           primary="getLiveProfileByUserId(data.stream.user_sys_id)"
+                           class="avatar-large"
+                           show-presence="false"
+                           enable-context-menu="false">
+                </sn-avatar-once>
+              </div>
+              <div class="timeline-panel timeline-panel-first-item">
+                <div class="timeline-heading">
+                  <div class="timeline-title h4">{{data.stream.user_full_name}}</div>
+                  <p>
+                    <small class="text-muted">
+                      <span class="glyphicon glyphicon-time" aria-hidden="true" tabindex="-1" />
+                      <sn-time-ago timestamp="data.created_on" />
+                    </small>
+                  </p>
+                </div>
+                <div class="timeline-body">
+                  <p>{{data.number}} ${Created}</p>
+                </div>
+              </div>
+            </li>
+            <li role="presentation" aria-hidden="true">
+              <div class="timeline-badge-wrap">
+              <div class="timeline-badge success">
+                  <span>${Start}</span>
+              </div>
+              </div>
+            </li>
+          </ul>
+        </div>
+
+      </div>
+      <div ng-if="!data.hasReadableJournalField">
+        {{options.no_readable_journal_field_message}}
+      </div>
+    </div>
+  </div>
+</div>
